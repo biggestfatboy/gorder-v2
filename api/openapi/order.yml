@@ -18,12 +18,12 @@ paths:
           name: customerID
           schema:
             type: string
-            required: true
+          required: true
         - in: path
           name: orderID
           schema:
             type: string
-            required: true
+          required: true
 
       responses:
         '200':
@@ -46,7 +46,7 @@ paths:
           name: customerID
           schema:
             type: string
-            required: true
+          required: true
       requestBody:
         required: true
         content:
