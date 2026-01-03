@@ -47,7 +47,7 @@ function gen_for_moudles() {
     log_info "generating code for $service"
 
     run protoc \
-      -I="/home/jiangtao/mygo/protobuffer/include/" \
+      -I="/home/gorder/share/protoc-33.2/include/" \
       -I="${API_ROOT}" \
       "--go_out=${go_out}" --go_opt=paths=source_relative \
       --go-grpc_opt=require_unimplemented_servers=false \
