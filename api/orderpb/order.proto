@@ -33,7 +33,7 @@ message Item{
   string  ID = 1;
   string  Name =2;
   int32 Quantity = 3;
-  string PriceId = 4;
+  string PriceID = 4;
 }
 
 message Order{
