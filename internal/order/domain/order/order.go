@@ -7,5 +7,5 @@ type Order struct {
 	CustomerID  string
 	Status      string
 	PaymentLink string
-	Items       []*orderpb.Order
+	Items       []*orderpb.Item
 }

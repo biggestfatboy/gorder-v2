@@ -31,7 +31,7 @@ func NewMemoryOrderRepository() *MemoryOrderRepository {
 	}
 }
 
-func (m MemoryOrderRepository) Create(ctx context.Context, order *domain.Order) (*domain.Order, error) {
+func (m *MemoryOrderRepository) Create(ctx context.Context, order *domain.Order) (*domain.Order, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	newOrder := &domain.Order{
@@ -45,7 +45,7 @@ func (m MemoryOrderRepository) Create(ctx context.Context, order *domain.Order) 
 	logrus.WithFields(logrus.Fields{
 		"input_order":        order,
 		"store_after_create": m.store,
-	}).Debug("memory_order_repo_create")
+	}).Info("memory_order_repo_create")
 	return newOrder, nil
 }
 
@@ -54,14 +54,14 @@ func (m MemoryOrderRepository) Get(ctx context.Context, id, customerID string) (
 	defer m.lock.RUnlock()
 	for _, o := range m.store {
 		if o.ID == id && o.CustomerID == customerID {
-			logrus.Debugf("memory_order_repo_get || found || id=%s || customerID=%s || res=%+v", id, customerID, *o)
+			logrus.Infof("memory_order_repo_get || found || id=%s || customerID=%s || res=%+v", id, customerID, *o)
 			return o, nil
 		}
 	}
 	return nil, domain.NotFoundError{OrderID: id}
 }
 
-func (m MemoryOrderRepository) Update(ctx context.Context, order *domain.Order, updateFn func(context.Context, *domain.Order) (*domain.Order, error)) error {
+func (m *MemoryOrderRepository) Update(ctx context.Context, order *domain.Order, updateFn func(context.Context, *domain.Order) (*domain.Order, error)) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
