@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/biggestfatboy/gorder-v2/common/config"
+	"github.com/biggestfatboy/gorder-v2/common/discovery"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 	"github.com/biggestfatboy/gorder-v2/common/server"
 	"github.com/biggestfatboy/gorder-v2/order/ports"
@@ -25,6 +26,15 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	//registry consul
+	deregisterFunc, err := discovery.RegisterToConsul(ctx, serviceName)
+	defer func() {
+		_ = deregisterFunc()
+	}()
+	if err != nil {
+		logrus.Fatal(err)
+	}
 
 	application, cleanup := service.NewApplication(ctx)
 	defer cleanup()
