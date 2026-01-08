@@ -5,6 +5,7 @@ import (
 	"github.com/biggestfatboy/gorder-v2/common/config"
 	"github.com/biggestfatboy/gorder-v2/common/discovery"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
+	"github.com/biggestfatboy/gorder-v2/common/logging"
 	"github.com/biggestfatboy/gorder-v2/common/server"
 	"github.com/biggestfatboy/gorder-v2/order/ports"
 	"github.com/biggestfatboy/gorder-v2/order/service"
@@ -15,17 +16,20 @@ import (
 )
 
 func init() {
+	logging.Init()
 	if err := config.NewViperConfig(); err != nil {
 		logrus.Fatal(err)
 	}
 }
 
 func main() {
-
 	serviceName := viper.GetString("order.service-name")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	application, cleanup := service.NewApplication(ctx)
+	defer cleanup()
 
 	//registry consul
 	deregisterFunc, err := discovery.RegisterToConsul(ctx, serviceName)
@@ -35,9 +39,6 @@ func main() {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-
-	application, cleanup := service.NewApplication(ctx)
-	defer cleanup()
 	go server.RunGRPCServer(serviceName, func(server *grpc.Server) {
 		svc := ports.NewGRPCServer(application)
 		orderpb.RegisterOrderServiceServer(server, svc)

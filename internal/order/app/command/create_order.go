@@ -2,11 +2,14 @@ package command
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"github.com/biggestfatboy/gorder-v2/common/broker"
 	"github.com/biggestfatboy/gorder-v2/common/decorator"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 	"github.com/biggestfatboy/gorder-v2/order/app/query"
 	domain "github.com/biggestfatboy/gorder-v2/order/domain/order"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,18 +27,30 @@ type CreateOrderHandler decorator.CommandHandler[CreateOrder, *CreateOrderResult
 type createOrderHandler struct {
 	orderRepo domain.Repository
 	stockGRPC query.StockService
+	channel   *amqp.Channel
 }
 
 func NewCreateOrderHandler(
 	orderRepo domain.Repository,
 	stockGRPC query.StockService,
+	channel *amqp.Channel,
 	logger *logrus.Entry,
 	metricClient decorator.MetricsClient) CreateOrderHandler {
 	if orderRepo == nil {
 		panic("nil orderRepo")
 	}
+	if stockGRPC == nil {
+		panic("nil stockGRPC")
+	}
+	if channel == nil {
+		panic("nil channel")
+	}
 	return decorator.ApplyCommandDecorators[CreateOrder, *CreateOrderResult](
-		createOrderHandler{orderRepo: orderRepo, stockGRPC: stockGRPC},
+		createOrderHandler{
+			orderRepo: orderRepo,
+			stockGRPC: stockGRPC,
+			channel:   channel,
+		},
 		logger,
 		metricClient)
 
@@ -63,6 +78,22 @@ func (c createOrderHandler) Handle(ctx context.Context, cmd CreateOrder) (*Creat
 	if err != nil {
 		return nil, err
 	}
+
+	q, err := c.channel.QueueDeclare(broker.EventOrderCreated, true, false, false, false, nil)
+	if err != nil {
+		return nil, err
+	}
+	marshalledOrder, err := json.Marshal(o)
+	err = c.channel.PublishWithContext(ctx, "", q.Name, false, false, amqp.Publishing{
+		ContentType:  "application/json",
+		DeliveryMode: amqp.Persistent,
+		Body:         marshalledOrder,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &CreateOrderResult{OrderID: o.ID}, nil
 }
 

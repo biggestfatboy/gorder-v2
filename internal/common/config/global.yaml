@@ -1,11 +1,26 @@
-fallback-grpc-addr: 127.0.0.1:3030
+fallback-grpc-addr: 192.168.77.38:3030
+consul:
+  addr: 192.168.77.38:8500
 order:
   service-name: order
   server-to-run: http
-  http-addr: 127.0.0.1:8282
-  grpc-addr: 127.0.0.1:5002
+  http-addr: 192.168.77.38:8282
+  grpc-addr: 192.168.77.38:5002
 stock:
   service-name: stock
   server-to-run: grpc
-  http-addr: 127.0.0.1:8283
-  grpc-addr: 127.0.0.1:5003
+  http-addr: 192.168.77.38:8283
+  grpc-addr: 192.168.77.38:5003
+payment:
+  service-name: payment
+  server-to-run: http
+  http-addr: 192.168.77.38:8284
+  grpc-addr: 192.168.77.38:5004
+
+rabbitmq:
+  user: guest
+  password: guest
+  host: 192.168.77.38
+  port: 5672
+
+stripe-key: "${STRIPE_KEY}"

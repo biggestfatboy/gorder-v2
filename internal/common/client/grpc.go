@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"github.com/biggestfatboy/gorder-v2/common/config"
+	"github.com/biggestfatboy/gorder-v2/common/discovery"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/stockpb"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -17,7 +18,13 @@ func init() {
 }
 
 func NewStockGRPCClient(ctx context.Context) (client stockpb.StockServiceClient, close func() error, err error) {
-	grpcAddr := viper.GetString("stock.grpc-addr")
+	grpcAddr, err := discovery.GetServiceAddr(ctx, viper.GetString("stock.service-name"))
+	if err != nil {
+		return nil, func() error { return nil }, err
+	}
+	if grpcAddr == "" {
+		logrus.Warn("empty grpc addr for stock grpc")
+	}
 	opts, err := grpcDialOpts(grpcAddr)
 	if err != nil {
 		return nil, func() error { return nil }, err
