@@ -8,6 +8,7 @@ import (
 	"github.com/biggestfatboy/gorder-v2/common/logging"
 	"github.com/biggestfatboy/gorder-v2/common/server"
 	"github.com/biggestfatboy/gorder-v2/payment/infrastructure/consumer"
+	"github.com/biggestfatboy/gorder-v2/payment/service"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -20,6 +21,13 @@ func init() {
 }
 
 func main() {
+	serverType := viper.GetString("payment.server-to-run")
+	serviceName := viper.GetString("payment.service-Name")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	application, cleanup := service.NewApplication(ctx)
+	defer cleanup()
+
 	ch, closeCh := broker.Connect(
 		viper.GetString("rabbitmq.user"),
 		viper.GetString("rabbitmq.password"),
@@ -31,13 +39,7 @@ func main() {
 		_ = closeCh()
 	}()
 
-	go consumer.NewConsumer().Listen(ch)
-
-	serverType := viper.GetString("payment.server-to-run")
-	serviceName := viper.GetString("payment.service-Name")
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	go consumer.NewConsumer(application).Listen(ch)
 
 	deregisterFunc, err := discovery.RegisterToConsul(ctx, serviceName)
 	defer func() {
@@ -47,7 +49,7 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	paymentHandler := NewPaymentHandler()
+	paymentHandler := NewPaymentHandler(ch)
 	switch serverType {
 	case "http":
 		server.RunHTTPServer(serviceName, paymentHandler.RegisterRoutes)

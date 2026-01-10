@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 	"github.com/biggestfatboy/gorder-v2/order/app"
 	"github.com/biggestfatboy/gorder-v2/order/app/command"
@@ -29,9 +30,11 @@ func (H HTTPServer) PostCustomerCustomerIDOrders(c *gin.Context, customerID stri
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":     "success",
-		"customer_id": req.CustomerID,
-		"order_id":    r.OrderID})
+		"message":      "success",
+		"customer_id":  req.CustomerID,
+		"order_id":     r.OrderID,
+		"redirect_url": fmt.Sprintf("http://192.168.77.38:8282/success?customerID=%s&orderID=%s", req.CustomerID, r.OrderID),
+	})
 }
 
 func (H HTTPServer) GetCustomerCustomerIDOrdersOrderID(c *gin.Context, customerID string, orderID string) {
@@ -47,6 +50,8 @@ func (H HTTPServer) GetCustomerCustomerIDOrdersOrderID(c *gin.Context, customerI
 	c.JSON(
 		http.StatusOK, gin.H{
 			"message": "success",
-			"data":    o,
+			"data": gin.H{
+				"Order": o,
+			},
 		})
 }
