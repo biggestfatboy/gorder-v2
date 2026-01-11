@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"github.com/biggestfatboy/gorder-v2/common/broker"
 	"github.com/biggestfatboy/gorder-v2/common/config"
 	"github.com/biggestfatboy/gorder-v2/common/discovery"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 	"github.com/biggestfatboy/gorder-v2/common/logging"
 	"github.com/biggestfatboy/gorder-v2/common/server"
+	"github.com/biggestfatboy/gorder-v2/order/infrastructure/consumer"
 	"github.com/biggestfatboy/gorder-v2/order/ports"
 	"github.com/biggestfatboy/gorder-v2/order/service"
 	"github.com/gin-gonic/gin"
@@ -36,6 +38,18 @@ func main() {
 	defer func() {
 		_ = deregisterFunc()
 	}()
+	ch, closeCh := broker.Connect(
+		viper.GetString("rabbitmq.user"),
+		viper.GetString("rabbitmq.password"),
+		viper.GetString("rabbitmq.host"),
+		viper.GetString("rabbitmq.port"))
+
+	defer func() {
+		_ = ch.Close()
+		_ = closeCh()
+	}()
+
+	go consumer.NewConsumer(application).Listen(ch)
 	if err != nil {
 		logrus.Fatal(err)
 	}

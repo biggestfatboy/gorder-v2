@@ -120,7 +120,7 @@
             document.getElementById('payment-link').href = data.data.Order.PaymentLink;
         }
         if (data.data.Order.Status === 'paid'){
-            order.Status = '已支付成果，请等待...';
+            order.Status = '已支付成功，请等待...';
             document.getElementById('orderStatus').innerText = order.Status;
             setTimeout(getOrder,5000);
         } else if (data.data.Order.Status==='ready'){

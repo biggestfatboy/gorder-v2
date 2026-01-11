@@ -2,7 +2,9 @@ package order
 
 import (
 	"errors"
+	"fmt"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
+	"github.com/stripe/stripe-go/v84"
 )
 
 type Order struct {
@@ -37,4 +39,11 @@ func (o *Order) ToProto() *orderpb.Order {
 		Items:       o.Items,
 		PaymentLink: o.PaymentLink,
 	}
+}
+
+func (o *Order) IsPaid() error {
+	if o.Status == string(stripe.CheckoutSessionPaymentStatusPaid) {
+		return nil
+	}
+	return fmt.Errorf("order statuts not paid, order id = %s, status=%x", o.ID, o.Status)
 }
