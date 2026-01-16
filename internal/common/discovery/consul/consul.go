@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/consul/api"
-	"github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/hashicorp/consul/api"
+	"github.com/sirupsen/logrus"
 )
 
 type Registry struct {
@@ -55,7 +56,7 @@ func (r Registry) Register(_ context.Context, instanceID, serviceName, hostPort 
 	})
 }
 
-func (r Registry) Deregister(ctx context.Context, instanceID, serviceName string) error {
+func (r Registry) Deregister(_ context.Context, instanceID, serviceName string) error {
 	defer func() {
 		logrus.WithFields(logrus.Fields{
 			"instanceID":  instanceID,
@@ -66,7 +67,7 @@ func (r Registry) Deregister(ctx context.Context, instanceID, serviceName string
 	return r.client.Agent().CheckDeregister(instanceID)
 }
 
-func (r Registry) Discovery(ctx context.Context, serviceName string) ([]string, error) {
+func (r Registry) Discovery(_ context.Context, serviceName string) ([]string, error) {
 	entries, _, err := r.client.Health().Service(serviceName, "", true, nil)
 	if err != nil {
 		return nil, err
@@ -78,7 +79,7 @@ func (r Registry) Discovery(ctx context.Context, serviceName string) ([]string, 
 	return ips, nil
 }
 
-func (r Registry) HealthCheck(instanceID, serviceName string) error {
+func (r Registry) HealthCheck(instanceID, _ string) error {
 	return r.client.Agent().UpdateTTL(instanceID, "online", api.HealthPassing)
 }
 

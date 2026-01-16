@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	"github.com/biggestfatboy/gorder-v2/common/metrics"
 	"github.com/biggestfatboy/gorder-v2/stock/adapters"
 	"github.com/biggestfatboy/gorder-v2/stock/app"
@@ -9,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewApplication(ctx context.Context) app.Application {
+func NewApplication(_ context.Context) app.Application {
 	stockRepo := adapters.NewMemoryStockRepository()
 	logger := logrus.NewEntry(logrus.StandardLogger())
 	metricsClient := metrics.TodoMetrics{}

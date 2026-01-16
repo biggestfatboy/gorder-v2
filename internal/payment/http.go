@@ -3,6 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"go.opentelemetry.io/otel"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/biggestfatboy/gorder-v2/common/broker"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 	"github.com/biggestfatboy/gorder-v2/payment/domain"
@@ -12,8 +17,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/webhook"
-	"io/ioutil"
-	"net/http"
 )
 
 type PaymentHandler struct {
@@ -64,7 +67,7 @@ func (h *PaymentHandler) handleWebhook(c *gin.Context) {
 
 		if session.PaymentStatus == stripe.CheckoutSessionPaymentStatusPaid {
 			logrus.Infof("payment for checkout session %v success!", session.ID)
-			ctx, cancel := context.WithCancel(context.TODO())
+			ctx, cancel := context.WithCancel(c.Request.Context())
 			defer cancel()
 
 			var items []*orderpb.Item
@@ -81,10 +84,17 @@ func (h *PaymentHandler) handleWebhook(c *gin.Context) {
 				c.JSON(http.StatusBadRequest, err.Error())
 				return
 			}
-			_ = h.channel.PublishWithContext(ctx, broker.EventOrderPaid, "", false, false, amqp.Publishing{
+
+			tr := otel.Tracer("rabbitMQ")
+			mqCtx, span := tr.Start(ctx, fmt.Sprintf("rabbitMQ.%s.publish", broker.EventOrderPaid))
+			defer span.End()
+			headers := broker.InjectRabbitMQHeaders(mqCtx)
+
+			_ = h.channel.PublishWithContext(mqCtx, broker.EventOrderPaid, "", false, false, amqp.Publishing{
 				ContentType:  "application/json",
 				DeliveryMode: amqp.Persistent,
 				Body:         marshalledORder,
+				Headers:      headers,
 			})
 			logrus.Infof("message published to %s, body:%s", broker.EventOrderPaid, string(marshalledORder))
 		}

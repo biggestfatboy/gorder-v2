@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+
 	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 )
 

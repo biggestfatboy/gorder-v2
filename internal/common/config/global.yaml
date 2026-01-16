@@ -1,4 +1,7 @@
 fallback-grpc-addr: 192.168.77.38:3030
+dial-grpc-timeout: 10
+jaeger:
+  url: "http://192.168.77.38:14268/api/traces"
 consul:
   addr: 192.168.77.38:8500
 order:
@@ -22,6 +25,16 @@ rabbitmq:
   password: guest
   host: 192.168.77.38
   port: 5672
+  max-retry: 3
+mongo:
+  user: root
+  password: password
+  host: 192.168.77.38
+  port: 27017
+  db-name: "order"
+  coll-name: "order"
+
+
 
 stripe-key: "${STRIPE_KEY}"
 endpoint-stripe-secret: "${ENDPOINT_STRIPE_SECRET}"

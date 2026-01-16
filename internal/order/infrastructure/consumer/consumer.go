@@ -3,6 +3,9 @@ package consumer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"go.opentelemetry.io/otel"
+
 	"github.com/biggestfatboy/gorder-v2/common/broker"
 	"github.com/biggestfatboy/gorder-v2/order/app"
 	"github.com/biggestfatboy/gorder-v2/order/app/command"
@@ -36,22 +39,33 @@ func (c *Consumer) Listen(ch *amqp.Channel) {
 	var forever chan struct{}
 	go func() {
 		for msg := range msgs {
-			c.handleMessage(msg, q, ch)
+			c.handleMessage(ch, msg, q)
 		}
 	}()
 	<-forever
 }
 
-func (c *Consumer) handleMessage(msg amqp.Delivery, q amqp.Queue, ch *amqp.Channel) {
+func (c *Consumer) handleMessage(ch *amqp.Channel, msg amqp.Delivery, q amqp.Queue) {
+	ctx := broker.ExtractRabbitMQHeaders(context.Background(), msg.Headers)
+	t := otel.Tracer("rabbitMQ")
+	_, span := t.Start(ctx, fmt.Sprintf("rabbitMQ.%s.consumer", q.Name))
+	defer span.End()
+	var err error
+	defer func() {
+		if err != nil {
+			_ = msg.Nack(false, false)
+		} else {
+			msg.Ack(false)
+		}
+	}()
 	logrus.Infof("order receive a message from %s, msg=%v", q.Name, string(msg.Body))
 
 	o := &order.Order{}
 	if err := json.Unmarshal(msg.Body, o); err != nil {
 		logrus.Infof("failed to unmarshall msg.body to domian.order, err=%v", err)
-		_ = msg.Nack(false, false)
 		return
 	}
-	if _, err := c.app.Commands.UpdateOrder.Handle(context.Background(), command.UpdateOrder{
+	if _, err := c.app.UpdateOrder.Handle(ctx, command.UpdateOrder{
 		Order: o,
 		UpdateFn: func(ctx context.Context, order *order.Order) (*order.Order, error) {
 			if err := o.IsPaid(); err != nil {
@@ -60,9 +74,12 @@ func (c *Consumer) handleMessage(msg amqp.Delivery, q amqp.Queue, ch *amqp.Chann
 			return order, nil
 		}}); err != nil {
 		logrus.Infof("failed to updating order, orderID = %v, err=%v", o.ID, err)
-		// TODO : retry
+		if err = broker.HandlerRetry(ctx, ch, &msg); err != nil {
+			logrus.Warnf("retry_error, error handling retry, messageID=%s, err=%v", msg.MessageId, err)
+		}
 		return
 	}
-	_ = msg.Ack(false)
+
+	span.AddEvent("order.updated")
 	logrus.Infof("Order consumer paid event success")
 }

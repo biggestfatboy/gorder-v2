@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+
 	"github.com/biggestfatboy/gorder-v2/common/decorator"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 	domain "github.com/biggestfatboy/gorder-v2/stock/domain/stock"
@@ -40,7 +41,7 @@ var stub = map[string]string{
 	"2": "price_1SnYWUDQBps38awR2EKwnRV2",
 }
 
-func (g checkIfItemsInStockHandler) Handle(ctx context.Context, query CheckIfItemsInStock) ([]*orderpb.Item, error) {
+func (g checkIfItemsInStockHandler) Handle(_ context.Context, query CheckIfItemsInStock) ([]*orderpb.Item, error) {
 
 	var res []*orderpb.Item
 	for _, i := range query.Items {

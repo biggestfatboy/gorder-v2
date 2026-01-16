@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	grpcClient "github.com/biggestfatboy/gorder-v2/common/client"
 	"github.com/biggestfatboy/gorder-v2/common/metrics"
 	adapterGRPC "github.com/biggestfatboy/gorder-v2/payment/adapters/grpc"
@@ -25,7 +26,7 @@ func NewApplication(ctx context.Context) (app.Application, func()) {
 	}
 }
 
-func newApplication(ctx context.Context, orderGRPC command.OrderService, processor domain.Processor) app.Application {
+func newApplication(_ context.Context, orderGRPC command.OrderService, processor domain.Processor) app.Application {
 	logger := logrus.NewEntry(logrus.StandardLogger())
 	metricsClient := metrics.TodoMetrics{}
 	return app.Application{

@@ -113,17 +113,17 @@
         const res = await  fetch(`/api/customer/${customerID}/orders/${orderID}`);
         const data = await res.json()
         console.log("data = ", data)
-        if (data.data.Order.Status === 'waiting_for_payment'){
+        if (data.data.Order.status === 'waiting_for_payment'){
             order.Status = '等待支付...';
             document.getElementById('orderStatus').innerText = order.Status;
             document.querySelector('.after-payment-popup').style.display = 'block';
-            document.getElementById('payment-link').href = data.data.Order.PaymentLink;
+            document.getElementById('payment-link').href = data.data.Order.payment_link;
         }
-        if (data.data.Order.Status === 'paid'){
+        if (data.data.Order.status === 'paid'){
             order.Status = '已支付成功，请等待...';
             document.getElementById('orderStatus').innerText = order.Status;
             setTimeout(getOrder,5000);
-        } else if (data.data.Order.Status==='ready'){
+        } else if (data.data.Order.status==='ready'){
             order.Status = '已完成...';
             document.querySelector('.after-payment-popup').style.display = 'none';
             document.querySelector('.ready-popup').style.display = 'block';

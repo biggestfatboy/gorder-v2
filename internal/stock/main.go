@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/biggestfatboy/gorder-v2/common/config"
+	"github.com/biggestfatboy/gorder-v2/common/tracing"
+
+	_ "github.com/biggestfatboy/gorder-v2/common/config"
 	"github.com/biggestfatboy/gorder-v2/common/discovery"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/stockpb"
 	"github.com/biggestfatboy/gorder-v2/common/logging"
@@ -16,9 +18,6 @@ import (
 
 func init() {
 	logging.Init()
-	if err := config.NewViperConfig(); err != nil {
-		logrus.Fatal(err)
-	}
 }
 
 func main() {
@@ -26,6 +25,14 @@ func main() {
 	serverType := viper.GetString("stock.server-to-run")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	shutdown, err := tracing.InitJaegerProvider(viper.GetString("jaeger.url"), serviceName)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	defer func() {
+		_ = shutdown(ctx)
+	}()
 
 	application := service.NewApplication(ctx)
 

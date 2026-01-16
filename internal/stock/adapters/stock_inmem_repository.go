@@ -2,8 +2,9 @@ package adapters
 
 import (
 	"context"
-	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 	"sync"
+
+	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 
 	domain "github.com/biggestfatboy/gorder-v2/stock/domain/stock"
 )
@@ -47,7 +48,7 @@ func NewMemoryStockRepository() *MemoryStockRepository {
 	}
 }
 
-func (m MemoryStockRepository) GetItems(ctx context.Context, ids []string) ([]*orderpb.Item, error) {
+func (m MemoryStockRepository) GetItems(_ context.Context, ids []string) ([]*orderpb.Item, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	var (

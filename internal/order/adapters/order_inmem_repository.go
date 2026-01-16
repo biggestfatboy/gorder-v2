@@ -2,19 +2,18 @@ package adapters
 
 import (
 	"context"
-	domain "github.com/biggestfatboy/gorder-v2/order/domain/order"
-	"github.com/sirupsen/logrus"
 	"strconv"
 	"sync"
 	"time"
+
+	domain "github.com/biggestfatboy/gorder-v2/order/domain/order"
+	"github.com/sirupsen/logrus"
 )
 
 type MemoryOrderRepository struct {
 	lock  *sync.RWMutex
 	store []*domain.Order
 }
-
-var fakeData = []*domain.Order{}
 
 func NewMemoryOrderRepository() *MemoryOrderRepository {
 	s := make([]*domain.Order, 0)
@@ -31,7 +30,7 @@ func NewMemoryOrderRepository() *MemoryOrderRepository {
 	}
 }
 
-func (m *MemoryOrderRepository) Create(ctx context.Context, order *domain.Order) (*domain.Order, error) {
+func (m *MemoryOrderRepository) Create(_ context.Context, order *domain.Order) (*domain.Order, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	newOrder := &domain.Order{
@@ -49,7 +48,7 @@ func (m *MemoryOrderRepository) Create(ctx context.Context, order *domain.Order)
 	return newOrder, nil
 }
 
-func (m MemoryOrderRepository) Get(ctx context.Context, id, customerID string) (*domain.Order, error) {
+func (m MemoryOrderRepository) Get(_ context.Context, id, customerID string) (*domain.Order, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	for _, o := range m.store {

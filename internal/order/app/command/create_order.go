@@ -4,18 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/biggestfatboy/gorder-v2/common/broker"
 	"github.com/biggestfatboy/gorder-v2/common/decorator"
-	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 	"github.com/biggestfatboy/gorder-v2/order/app/query"
+	"github.com/biggestfatboy/gorder-v2/order/convertor"
 	domain "github.com/biggestfatboy/gorder-v2/order/domain/order"
+	"github.com/biggestfatboy/gorder-v2/order/entity"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
 )
 
 type CreateOrder struct {
 	CustomerID string
-	Items      []*orderpb.ItemWithQuantity
+	Items      []*entity.ItemWithQuantity
 }
 
 type CreateOrderResult struct {
@@ -56,38 +59,38 @@ func NewCreateOrderHandler(
 
 }
 func (c createOrderHandler) Handle(ctx context.Context, cmd CreateOrder) (*CreateOrderResult, error) {
-	//logrus.Info("before createOrderHandler")
-	//err := c.stockGRPC.CheckIfItemsInStock(ctx, cmd.Items)
-	//resp, err := c.stockGRPC.GetItems(ctx, []string{"123"})
-	//logrus.Info("createOrderHandler || err from stockGRPC", resp)
-	//var stockResponse []*orderpb.Item
-	//for _, item := range cmd.Items {
-	//	stockResponse = append(stockResponse, &orderpb.Item{
-	//		ID:       item.ID,
-	//		Quantity: item.Quantity,
-	//	})
-	//}
-	validItems, err := c.validate(ctx, cmd.Items)
-	if err != nil {
-		return nil, err
-	}
-	o, err := c.orderRepo.Create(ctx, &domain.Order{
-		CustomerID: cmd.CustomerID,
-		Items:      validItems,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	q, err := c.channel.QueueDeclare(broker.EventOrderCreated, true, false, false, false, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	t := otel.Tracer("rabbitMQ")
+	ctx, span := t.Start(ctx, fmt.Sprintf("rabbitMQ.%s.publish", q.Name))
+	defer span.End()
+
+	validItems, err := c.validate(ctx, cmd.Items)
+	if err != nil {
+		return nil, err
+	}
+	pendingOrder, err := domain.NewPendingOrder(cmd.CustomerID, validItems)
+	if err != nil {
+		return nil, err
+	}
+	o, err := c.orderRepo.Create(ctx, pendingOrder)
+	if err != nil {
+		return nil, err
+	}
+
 	marshalledOrder, err := json.Marshal(o)
+	if err != nil {
+		return nil, err
+	}
+	header := broker.InjectRabbitMQHeaders(ctx)
 	err = c.channel.PublishWithContext(ctx, "", q.Name, false, false, amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 		Body:         marshalledOrder,
+		Headers:      header,
 	})
 
 	if err != nil {
@@ -97,31 +100,31 @@ func (c createOrderHandler) Handle(ctx context.Context, cmd CreateOrder) (*Creat
 	return &CreateOrderResult{OrderID: o.ID}, nil
 }
 
-func (c createOrderHandler) validate(ctx context.Context, items []*orderpb.ItemWithQuantity) ([]*orderpb.Item, error) {
+func (c createOrderHandler) validate(ctx context.Context, items []*entity.ItemWithQuantity) ([]*entity.Item, error) {
 	if len(items) == 0 {
 		return nil, errors.New("must have at least one item")
 	}
 
 	items = packItems(items)
 
-	resp, err := c.stockGRPC.CheckIfItemsInStock(ctx, items)
+	resp, err := c.stockGRPC.CheckIfItemsInStock(ctx, convertor.NewItemWithQuantityConvertor().EntitiesToProtos(items))
 	if err != nil {
 		return nil, err
 	}
 
-	return resp.Items, nil
+	return convertor.NewItemConvertor().ProtosToEntities(resp.Items), nil
 }
 
-func packItems(items []*orderpb.ItemWithQuantity) []*orderpb.ItemWithQuantity {
+func packItems(items []*entity.ItemWithQuantity) []*entity.ItemWithQuantity {
 	merged := make(map[string]int32)
 
 	for _, item := range items {
 		merged[item.ID] += item.Quantity
 	}
 
-	var res []*orderpb.ItemWithQuantity
+	var res []*entity.ItemWithQuantity
 	for id, quantity := range merged {
-		res = append(res, &orderpb.ItemWithQuantity{
+		res = append(res, &entity.ItemWithQuantity{
 			ID:       id,
 			Quantity: quantity,
 		})

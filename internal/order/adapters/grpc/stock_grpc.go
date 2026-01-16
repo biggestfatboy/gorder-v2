@@ -1,11 +1,12 @@
 package grpc
 
 import (
+	"context"
+
 	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/stockpb"
 	"github.com/sirupsen/logrus"
 )
-import "context"
 
 type StockGRPC struct {
 	client stockpb.StockServiceClient
