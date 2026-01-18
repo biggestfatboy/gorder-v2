@@ -26,6 +26,12 @@ rabbitmq:
   host: 192.168.77.38
   port: 5672
   max-retry: 3
+mysql:
+  user: root
+  password: root
+  host: 192.168.77.38
+  port: 3307
+  dbname: "gorder_v2"
 mongo:
   user: root
   password: password

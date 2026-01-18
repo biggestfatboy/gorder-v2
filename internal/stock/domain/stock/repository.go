@@ -3,13 +3,13 @@ package stock
 import (
 	"context"
 	"fmt"
+	"github.com/biggestfatboy/gorder-v2/stock/entity"
 	"strings"
-
-	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 )
 
 type Repository interface {
-	GetItems(ctx context.Context, ids []string) ([]*orderpb.Item, error)
+	GetItems(ctx context.Context, ids []string) ([]*entity.Item, error)
+	GetStock(ctx context.Context, ids []string) ([]*entity.ItemWithQuantity, error)
 }
 
 type NotFoundError struct {
@@ -18,4 +18,16 @@ type NotFoundError struct {
 
 func (e NotFoundError) Error() string {
 	return fmt.Sprintf("these items not found in stock: %s", strings.Join(e.Missing, ","))
+}
+
+type ExceedStockError struct {
+	FailedOnItems []entity.FailedItem
+}
+
+func (e ExceedStockError) Error() string {
+	var info []string
+	for _, item := range e.FailedOnItems {
+		info = append(info, fmt.Sprintf("product_id=%s, want %d, have %d\n", item.ID, item.Want, item.Have))
+	}
+	return fmt.Sprintf("not enough stock for [%s]", strings.Join(info, ","))
 }

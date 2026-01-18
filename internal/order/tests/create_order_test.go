@@ -14,7 +14,6 @@ import (
 var (
 	ctx    = context.Background()
 	server = fmt.Sprintf("http://%s/api", viper.GetString("order.http-addr"))
-	client *sw.ClientWithResponses
 )
 
 func TestMain(m *testing.M) {
@@ -32,8 +31,12 @@ func TestCreateOrder_success(t *testing.T) {
 		CustomerId: "123",
 		Items: []sw.ItemWithQuantity{
 			{
-				Id:       "test-item-1",
+				Id:       "prod_Tl4fdsn4Mu1y7h",
 				Quantity: 1,
+			},
+			{
+				Id:       "prod_TkLcu8T8OJmpoq",
+				Quantity: 10,
 			},
 		},
 	})
@@ -48,7 +51,7 @@ func TestCreateOrder_invalidParams(t *testing.T) {
 		Items:      nil,
 	})
 	assert.Equal(t, 200, response.StatusCode())
-	assert.Equal(t, 1, response.JSON200.Errno)
+	assert.Equal(t, 2, response.JSON200.Errno)
 }
 
 func getResponse(t *testing.T, customerID string, body sw.PostCustomerCustomerIdOrdersJSONRequestBody) *sw.PostCustomerCustomerIdOrdersResponse {

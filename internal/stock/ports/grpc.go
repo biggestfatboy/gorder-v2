@@ -2,11 +2,11 @@ package ports
 
 import (
 	"context"
-	"github.com/biggestfatboy/gorder-v2/common/tracing"
-
 	"github.com/biggestfatboy/gorder-v2/common/genproto/stockpb"
+	"github.com/biggestfatboy/gorder-v2/common/tracing"
 	"github.com/biggestfatboy/gorder-v2/stock/app"
 	"github.com/biggestfatboy/gorder-v2/stock/app/query"
+	"github.com/biggestfatboy/gorder-v2/stock/convertor"
 )
 
 type GRPCServer struct {
@@ -24,18 +24,18 @@ func (G GRPCServer) GetItems(ctx context.Context, request *stockpb.GetItemsReque
 	if err != nil {
 		return nil, err
 	}
-	return &stockpb.GetItemsResponse{Items: items}, nil
+	return &stockpb.GetItemsResponse{Items: convertor.NewItemConvertor().EntitiesToProtos(items)}, nil
 }
 
 func (G GRPCServer) CheckIfItemsInStock(ctx context.Context, request *stockpb.CheckIfItemsInStockRequest) (*stockpb.CheckIfItemsInStockResponse, error) {
 	_, span := tracing.Start(ctx, "CheckIfItemsInStock")
 	defer span.End()
-	items, err := G.app.CheckIfItemsInStock.Handle(ctx, query.CheckIfItemsInStock{Items: request.Items})
+	items, err := G.app.CheckIfItemsInStock.Handle(ctx, query.CheckIfItemsInStock{Items: convertor.NewItemWithQuantityConvertor().ProtosToEntities(request.Items)})
 	if err != nil {
 		return nil, err
 	}
 	return &stockpb.CheckIfItemsInStockResponse{
 		InStock: 1,
-		Items:   items,
+		Items:   convertor.NewItemConvertor().EntitiesToProtos(items),
 	}, nil
 }

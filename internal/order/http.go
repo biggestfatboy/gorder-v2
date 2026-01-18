@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/biggestfatboy/gorder-v2/common"
 	client "github.com/biggestfatboy/gorder-v2/common/client/order"
@@ -11,6 +12,7 @@ import (
 	"github.com/biggestfatboy/gorder-v2/order/app/query"
 	"github.com/biggestfatboy/gorder-v2/order/convertor"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -35,6 +37,10 @@ func (H HTTPServer) PostCustomerCustomerIdOrders(c *gin.Context, _ string) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
+	if err = H.validate(req); err != nil {
+		return
+	}
+	logrus.Infof("start to create customer customer order with customer id %s", req.CustomerId)
 	r, err := H.app.CreateOrder.Handle(c.Request.Context(), command.CreateOrder{
 		CustomerID: req.CustomerId,
 		Items:      convertor.NewItemWithQuantityConvertor().ClientsToEntities(req.Items),
@@ -69,4 +75,13 @@ func (H HTTPServer) GetCustomerCustomerIdOrdersOrderId(c *gin.Context, customerI
 		return
 	}
 	resp.Order = convertor.NewOrderConvertor().EntityToClient(o)
+}
+
+func (H HTTPServer) validate(req client.CreateOrderRequest) error {
+	for _, v := range req.Items {
+		if v.Quantity <= 0 {
+			return errors.New("quantity must be positive")
+		}
+	}
+	return nil
 }

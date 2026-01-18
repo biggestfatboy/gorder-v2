@@ -1,0 +1,31 @@
+package integration
+
+import (
+	"context"
+	_ "github.com/biggestfatboy/gorder-v2/common/config"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+	"github.com/stripe/stripe-go/v84"
+	"github.com/stripe/stripe-go/v84/product"
+)
+
+type StripeAPI struct {
+	apiKey string
+}
+
+func NewStripeAPI() *StripeAPI {
+	key := viper.GetString("stripe-key")
+	if key == "" {
+		logrus.Fatal("empty stripe-api key")
+	}
+	return &StripeAPI{apiKey: key}
+}
+
+func (s *StripeAPI) GetPriceByProductID(_ context.Context, pid string) (string, error) {
+	stripe.Key = s.apiKey
+	result, err := product.Get(pid, &stripe.ProductParams{})
+	if err != nil {
+		return "", err
+	}
+	return result.DefaultPrice.ID, nil
+}

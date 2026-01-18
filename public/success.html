@@ -127,7 +127,7 @@
             order.Status = '已完成...';
             document.querySelector('.after-payment-popup').style.display = 'none';
             document.querySelector('.ready-popup').style.display = 'block';
-            document.getElementById('orederID').innerText = orderID;
+            document.getElementById('orderID').innerText = orderID;
             document.getElementById('orderStatus').innerText = order.Status;
         }else{
             setTimeout(getOrder,5000);
