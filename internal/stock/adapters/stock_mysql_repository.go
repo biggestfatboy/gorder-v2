@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/biggestfatboy/gorder-v2/stock/entity"
 	"github.com/biggestfatboy/gorder-v2/stock/infrastructure/persistent"
+	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type MySQLStockRepository struct {
@@ -32,4 +34,53 @@ func (m MySQLStockRepository) GetStock(ctx context.Context, ids []string) ([]*en
 		})
 	}
 	return result, nil
+}
+func (m MySQLStockRepository) UpdateStock(ctx context.Context,
+	data []*entity.ItemWithQuantity,
+	updateFn func(
+		ctx context.Context,
+		existing []*entity.ItemWithQuantity,
+		query []*entity.ItemWithQuantity,
+	) ([]*entity.ItemWithQuantity, error)) error {
+	return m.db.StartTransaction(func(tx *gorm.DB) (err error) {
+		defer func() {
+			if err != nil {
+				logrus.Warn("update stock transaction err=%v", err)
+			}
+		}()
+		var dest []*persistent.StockModel
+		if err = tx.Table("o_stock").Where("product_id IN ?", getIDFromEntities(data)).Find(&dest).Error; err != nil {
+			return err
+		}
+		existing := m.unmarshalFromDatabase(dest)
+		updated, err := updateFn(ctx, existing, data)
+		if err != nil {
+			return err
+		}
+		for _, upd := range updated {
+			if err = tx.Table("o_stock").Where("product_id = ?", upd.ID).Update("quantity", upd.Quantity).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (m MySQLStockRepository) unmarshalFromDatabase(dest []*persistent.StockModel) []*entity.ItemWithQuantity {
+	res := make([]*entity.ItemWithQuantity, len(dest))
+	for i, item := range dest {
+		res[i] = &entity.ItemWithQuantity{
+			ID:       item.ProductID,
+			Quantity: item.Quantity,
+		}
+	}
+	return res
+}
+
+func getIDFromEntities(data []*entity.ItemWithQuantity) []string {
+	var ids []string
+	for _, i := range data {
+		ids = append(ids, i.ID)
+	}
+	return ids
 }

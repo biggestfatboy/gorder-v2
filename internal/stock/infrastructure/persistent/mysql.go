@@ -43,6 +43,10 @@ func (s StockModel) TableName() string {
 	return "o_stock"
 }
 
+func (d MySQL) StartTransaction(f func(tx *gorm.DB) error) error {
+	return d.db.Transaction(f)
+}
+
 func (d MySQL) BatchGetStockByID(ctx context.Context, productIDS []string) ([]StockModel, error) {
 	var results []StockModel
 	tx := d.db.WithContext(ctx).Where("product_id IN ?", productIDS).Find(&results)

@@ -2,12 +2,19 @@ package query
 
 import (
 	"context"
+	"github.com/biggestfatboy/gorder-v2/common/handler/redis"
 	"github.com/biggestfatboy/gorder-v2/stock/entity"
 	"github.com/biggestfatboy/gorder-v2/stock/infrastructure/integration"
+	"strings"
+	"time"
 
 	"github.com/biggestfatboy/gorder-v2/common/decorator"
 	domain "github.com/biggestfatboy/gorder-v2/stock/domain/stock"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	redisLockPrefix = "check_stock"
 )
 
 type CheckIfItemsInStock struct {
@@ -48,9 +55,15 @@ var stub = map[string]string{
 }
 
 func (g checkIfItemsInStockHandler) Handle(ctx context.Context, query CheckIfItemsInStock) ([]*entity.Item, error) {
-	if err := g.checkStock(ctx, query.Items); err != nil {
+	if err := lock(ctx, getLockKey(query)); err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err := unlock(ctx, getLockKey(query)); err != nil {
+			logrus.Warnf("redis unlock failed, err=%v", err)
+		}
+	}()
+
 	var res []*entity.Item
 	for _, i := range query.Items {
 		priceID, err := g.stripeAPI.GetPriceByProductID(ctx, i.ID)
@@ -64,7 +77,26 @@ func (g checkIfItemsInStockHandler) Handle(ctx context.Context, query CheckIfIte
 		})
 	}
 	//TODO 扣库存
+	if err := g.checkStock(ctx, query.Items); err != nil {
+		return nil, err
+	}
 	return res, nil
+}
+
+func getLockKey(query CheckIfItemsInStock) string {
+	var ids []string
+	for _, i := range query.Items {
+		ids = append(ids, i.ID)
+	}
+	return redisLockPrefix + strings.Join(ids, "_")
+}
+
+func lock(ctx context.Context, key string) error {
+	return redis.SetNX(ctx, redis.LocalClient(), key, "1", 5*time.Minute)
+}
+
+func unlock(ctx context.Context, key string) error {
+	return redis.Del(ctx, redis.LocalClient(), key)
 }
 
 func (h checkIfItemsInStockHandler) checkStock(ctx context.Context, queryItems []*entity.ItemWithQuantity) error {
@@ -96,7 +128,23 @@ func (h checkIfItemsInStockHandler) checkStock(ctx context.Context, queryItems [
 		}
 	}
 	if ok {
-		return nil
+		return h.stockRepo.UpdateStock(ctx, queryItems, func(
+			ctx context.Context,
+			existing []*entity.ItemWithQuantity,
+			query []*entity.ItemWithQuantity) ([]*entity.ItemWithQuantity, error) {
+			var newItems []*entity.ItemWithQuantity
+			for _, e := range existing {
+				for _, q := range query {
+					if e.ID == q.ID {
+						newItems = append(newItems, &entity.ItemWithQuantity{
+							ID:       e.ID,
+							Quantity: e.Quantity - q.Quantity,
+						})
+					}
+				}
+			}
+			return newItems, nil
+		})
 	}
 	return domain.ExceedStockError{FailedOnItems: failedOn}
 }
