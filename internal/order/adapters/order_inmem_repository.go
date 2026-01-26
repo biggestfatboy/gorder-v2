@@ -2,12 +2,12 @@ package adapters
 
 import (
 	"context"
+	"github.com/biggestfatboy/gorder-v2/common/logging"
 	"strconv"
 	"sync"
 	"time"
 
 	domain "github.com/biggestfatboy/gorder-v2/order/domain/order"
-	"github.com/sirupsen/logrus"
 )
 
 type MemoryOrderRepository struct {
@@ -16,21 +16,24 @@ type MemoryOrderRepository struct {
 }
 
 func NewMemoryOrderRepository() *MemoryOrderRepository {
-	s := make([]*domain.Order, 0)
-	s = append(s, &domain.Order{
-		ID:          "fake-ID",
-		CustomerID:  "fake-customer-id",
-		Status:      "fake-status",
-		PaymentLink: "fake-payment-link",
-		Items:       nil,
-	})
+	s := []*domain.Order{
+		{
+			ID:          "fake-ID",
+			CustomerID:  "fake-customer-id",
+			Status:      "fake-status",
+			PaymentLink: "fake-payment-link",
+			Items:       nil,
+		},
+	}
 	return &MemoryOrderRepository{
 		lock:  &sync.RWMutex{},
 		store: s,
 	}
 }
 
-func (m *MemoryOrderRepository) Create(_ context.Context, order *domain.Order) (*domain.Order, error) {
+func (m *MemoryOrderRepository) Create(ctx context.Context, order *domain.Order) (created *domain.Order, err error) {
+	_, deferLog := logging.WhenRequest(ctx, "MemoryOrderRepository.Create", map[string]any{"order": order})
+	defer deferLog(created, &err)
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	newOrder := &domain.Order{
@@ -41,19 +44,14 @@ func (m *MemoryOrderRepository) Create(_ context.Context, order *domain.Order) (
 		Items:       order.Items,
 	}
 	m.store = append(m.store, newOrder)
-	logrus.WithFields(logrus.Fields{
-		"input_order":        order,
-		"store_after_create": m.store,
-	}).Info("memory_order_repo_create")
 	return newOrder, nil
 }
 
-func (m MemoryOrderRepository) Get(_ context.Context, id, customerID string) (*domain.Order, error) {
+func (m MemoryOrderRepository) Get(ctx context.Context, id, customerID string) (got *domain.Order, err error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	for _, o := range m.store {
 		if o.ID == id && o.CustomerID == customerID {
-			logrus.Infof("memory_order_repo_get || found || id=%s || customerID=%s || res=%+v", id, customerID, *o)
 			return o, nil
 		}
 	}

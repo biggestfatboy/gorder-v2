@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/biggestfatboy/gorder-v2/common/logging"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"io"
@@ -25,10 +26,10 @@ func requestIn(c *gin.Context, l *logrus.Entry) {
 	var compactJson bytes.Buffer
 	_ = json.Compact(&compactJson, bodyBytes)
 	logrus.WithContext(c.Request.Context()).WithFields(logrus.Fields{
-		"start": time.Now().Unix(),
-		"args":  compactJson.String(),
-		"from":  c.RemoteIP(),
-		"uri":   c.Request.RequestURI,
+		"start":      time.Now().Unix(),
+		logging.Args: compactJson.String(),
+		"from":       c.RemoteIP(),
+		"uri":        c.Request.RequestURI,
 	}).Info("_request_in")
 }
 func requestOut(c *gin.Context, l *logrus.Entry) {
@@ -36,7 +37,7 @@ func requestOut(c *gin.Context, l *logrus.Entry) {
 	start, _ := c.Get("request_start")
 	startTime := start.(time.Time)
 	logrus.WithContext(c.Request.Context()).WithFields(logrus.Fields{
-		"proc_time_ms": time.Since(startTime).Milliseconds(),
-		"response":     response,
+		logging.Cost:     time.Since(startTime).Milliseconds(),
+		logging.Response: response,
 	}).Info("_request_out")
 }

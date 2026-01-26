@@ -1,10 +1,11 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"github.com/biggestfatboy/gorder-v2/common"
 	client "github.com/biggestfatboy/gorder-v2/common/client/order"
+	"github.com/biggestfatboy/gorder-v2/common/consts"
+	"github.com/biggestfatboy/gorder-v2/common/handler/errors"
 	"github.com/biggestfatboy/gorder-v2/common/tracing"
 	"github.com/biggestfatboy/gorder-v2/order/app"
 	"github.com/biggestfatboy/gorder-v2/order/app/command"
@@ -13,7 +14,6 @@ import (
 	"github.com/biggestfatboy/gorder-v2/order/convertor"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"net/http"
 )
 
 type HTTPServer struct {
@@ -34,10 +34,11 @@ func (H HTTPServer) PostCustomerCustomerIdOrders(c *gin.Context, _ string) {
 		H.Response(c, err, &resp)
 	}()
 	if err = c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		err = errors.NewWithError(consts.ErrnoBindRequestError, err)
 		return
 	}
 	if err = H.validate(req); err != nil {
+		err = errors.NewWithError(consts.ErrnoRequestValidateError, err)
 		return
 	}
 	logrus.Infof("start to create customer customer order with customer id %s", req.CustomerId)
@@ -80,7 +81,7 @@ func (H HTTPServer) GetCustomerCustomerIdOrdersOrderId(c *gin.Context, customerI
 func (H HTTPServer) validate(req client.CreateOrderRequest) error {
 	for _, v := range req.Items {
 		if v.Quantity <= 0 {
-			return errors.New("quantity must be positive")
+			return fmt.Errorf("quantity must be positive, got %d from %s", v.Quantity, v.Id)
 		}
 	}
 	return nil

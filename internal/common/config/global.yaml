@@ -19,7 +19,8 @@ payment:
   server-to-run: http
   http-addr: 192.168.77.38:8284
   grpc-addr: 192.168.77.38:5004
-
+kitchen:
+  service-name: kitchen
 rabbitmq:
   user: guest
   password: guest

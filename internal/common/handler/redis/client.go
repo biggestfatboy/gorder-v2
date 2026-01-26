@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"errors"
+	"github.com/biggestfatboy/gorder-v2/common/logging"
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"time"
@@ -12,11 +13,11 @@ func SetNX(ctx context.Context, client *redis.Client, key, value string, ttl tim
 	now := time.Now()
 	defer func() {
 		l := logrus.WithContext(ctx).WithFields(logrus.Fields{
-			"start": now,
-			"key":   key,
-			"value": value,
-			"err":   err,
-			"const": time.Since(now).Milliseconds(),
+			"start":       now,
+			"key":         key,
+			"value":       value,
+			logging.Error: err,
+			logging.Cost:  time.Since(now).Milliseconds(),
 		})
 		if err == nil {
 			l.Info("redis_setnx_success")
@@ -37,10 +38,10 @@ func Del(ctx context.Context, client *redis.Client, key string) (err error) {
 	now := time.Now()
 	defer func() {
 		l := logrus.WithContext(ctx).WithFields(logrus.Fields{
-			"start": now,
-			"key":   key,
-			"err":   err,
-			"const": time.Since(now).Milliseconds(),
+			"start":       now,
+			"key":         key,
+			logging.Error: err,
+			logging.Cost:  time.Since(now).Milliseconds(),
 		})
 		if err == nil {
 			l.Info("redis_del_success")

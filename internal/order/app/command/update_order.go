@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"github.com/biggestfatboy/gorder-v2/common/logging"
 
 	"github.com/biggestfatboy/gorder-v2/common/decorator"
 	domain "github.com/biggestfatboy/gorder-v2/order/domain/order"
@@ -34,11 +35,10 @@ func NewUpdateOrderHandler(
 
 }
 func (c updateOrderHandler) Handle(ctx context.Context, cmd UpdateOrder) (interface{}, error) {
+	var err error
+	defer logging.WhenCommandExecute(ctx, "UpdateOrderHandler", cmd, err)
 	if cmd.UpdateFn == nil {
-		logrus.Warnf("updateOrderHandler got nil UpdateFn, order=%#v", cmd.Order)
-		cmd.UpdateFn = func(_ context.Context, order *domain.Order) (*domain.Order, error) {
-			return order, nil
-		}
+		logrus.Panicf("UpdateOrderHandler got nil UpdateFunction, cmd=%+v", cmd)
 	}
 	if err := c.orderRepo.Update(ctx, cmd.Order, cmd.UpdateFn); err != nil {
 		return nil, err

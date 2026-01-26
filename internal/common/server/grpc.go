@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/biggestfatboy/gorder-v2/common/logging"
 	"net"
 
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
@@ -33,6 +34,7 @@ func RunGRPCServerOnAddr(addr string, registerServer func(server *grpc.Server)) 
 		grpc.ChainUnaryInterceptor(
 			grpc_tags.UnaryServerInterceptor(grpc_tags.WithFieldExtractor(grpc_tags.CodeGenRequestFieldExtractor)),
 			grpc_logrus.UnaryServerInterceptor(logrusEntry),
+			logging.GRPCUnaryInterceptor,
 		),
 		grpc.ChainStreamInterceptor(
 			grpc_tags.StreamServerInterceptor(grpc_tags.WithFieldExtractor(grpc_tags.CodeGenRequestFieldExtractor)),

@@ -3,8 +3,10 @@ package query
 import (
 	"context"
 	"github.com/biggestfatboy/gorder-v2/common/handler/redis"
+	"github.com/biggestfatboy/gorder-v2/common/logging"
 	"github.com/biggestfatboy/gorder-v2/stock/entity"
 	"github.com/biggestfatboy/gorder-v2/stock/infrastructure/integration"
+	"github.com/pkg/errors"
 	"strings"
 	"time"
 
@@ -56,11 +58,11 @@ var stub = map[string]string{
 
 func (g checkIfItemsInStockHandler) Handle(ctx context.Context, query CheckIfItemsInStock) ([]*entity.Item, error) {
 	if err := lock(ctx, getLockKey(query)); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "redis lock error: key=%s", getLockKey(query))
 	}
 	defer func() {
 		if err := unlock(ctx, getLockKey(query)); err != nil {
-			logrus.Warnf("redis unlock failed, err=%v", err)
+			logging.Warnf(ctx, nil, "redis unlock failed, err=%v", err)
 		}
 	}()
 

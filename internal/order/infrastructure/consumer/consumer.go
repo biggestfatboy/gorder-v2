@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/biggestfatboy/gorder-v2/common/logging"
+	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel"
 
 	"github.com/biggestfatboy/gorder-v2/common/broker"
@@ -53,29 +55,32 @@ func (c *Consumer) handleMessage(ch *amqp.Channel, msg amqp.Delivery, q amqp.Que
 	var err error
 	defer func() {
 		if err != nil {
+			logging.Warnf(ctx, nil, "consume failed || from=%s || msg=%+v || err=%v", q.Name, msg, err)
 			_ = msg.Nack(false, false)
 		} else {
-			msg.Ack(false)
+			logging.Infof(ctx, nil, "%s", "consume success")
+			_ = msg.Ack(false)
 		}
 	}()
 	logrus.Infof("order receive a message from %s, msg=%v", q.Name, string(msg.Body))
 
 	o := &order.Order{}
-	if err := json.Unmarshal(msg.Body, o); err != nil {
-		logrus.Infof("failed to unmarshall msg.body to domian.order, err=%v", err)
+	if err = json.Unmarshal(msg.Body, o); err != nil {
+		err = errors.Wrap(err, "failed to unmarshall msg.body to domian.order")
 		return
 	}
-	if _, err := c.app.UpdateOrder.Handle(ctx, command.UpdateOrder{
+	if _, err = c.app.UpdateOrder.Handle(ctx, command.UpdateOrder{
 		Order: o,
 		UpdateFn: func(ctx context.Context, order *order.Order) (*order.Order, error) {
-			if err := o.IsPaid(); err != nil {
+			if err = o.IsPaid(); err != nil {
 				return nil, err
 			}
 			return order, nil
 		}}); err != nil {
-		logrus.Infof("failed to updating order, orderID = %v, err=%v", o.ID, err)
+		logging.Errof(ctx, nil, "failed to updating order, orderID = %v, err=%v", o.ID, err)
+
 		if err = broker.HandlerRetry(ctx, ch, &msg); err != nil {
-			logrus.Warnf("retry_error, error handling retry, messageID=%s, err=%v", msg.MessageId, err)
+			err = errors.Wrapf(err, "retry_error, error handling retry, messageID=%s || err=%v", msg.MessageId, err)
 		}
 		return
 	}

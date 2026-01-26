@@ -1,9 +1,10 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/biggestfatboy/gorder-v2/common/logging"
+	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel"
 	"io/ioutil"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	"github.com/biggestfatboy/gorder-v2/payment/domain"
 	"github.com/gin-gonic/gin"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/webhook"
@@ -32,12 +32,19 @@ func (h *PaymentHandler) RegisterRoutes(c *gin.Engine) {
 }
 
 func (h *PaymentHandler) handleWebhook(c *gin.Context) {
+	var err error
+	defer func() {
+		if err != nil {
+			logging.Warnf(c.Request.Context(), nil, "handleWebhook err: %v", err)
+		} else {
+			logging.Infof(c.Request.Context(), nil, "%s", "handleWebhook success")
+		}
+	}()
 	const MaxBodyBytes = int64(65536)
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxBodyBytes)
 	payload, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		logrus.Infof("Error reading request body: %v\n", err)
-		c.Writer.WriteHeader(http.StatusServiceUnavailable)
+		err = errors.Wrap(err, "Error reading request body")
 		c.JSON(http.StatusServiceUnavailable, err)
 		return
 	}
@@ -50,7 +57,7 @@ func (h *PaymentHandler) handleWebhook(c *gin.Context) {
 	signatureHeader := c.Request.Header.Get("Stripe-Signature")
 	event, err := webhook.ConstructEvent(payload, signatureHeader, endpointSecret)
 	if err != nil {
-		logrus.Infof("⚠️  Webhook verifying webhook signature failed. %v\n", err)
+		err = errors.Wrap(err, "Webhook verifying webhook signature failed")
 		c.JSON(http.StatusBadRequest, err.Error())
 		// Return a 400 error on a bad signature
 		return
@@ -59,44 +66,33 @@ func (h *PaymentHandler) handleWebhook(c *gin.Context) {
 	switch event.Type {
 	case stripe.EventTypeCheckoutSessionCompleted:
 		var session stripe.CheckoutSession
-		if err := json.Unmarshal(event.Data.Raw, &session); err != nil {
-			logrus.Infof("error unmarshall event.data.raw into session, err = %v", err)
+		if err = json.Unmarshal(event.Data.Raw, &session); err != nil {
+			err = errors.Wrap(err, "error unmarshall event.data.raw into session")
 			c.JSON(http.StatusBadRequest, err.Error())
 			return
 		}
 
 		if session.PaymentStatus == stripe.CheckoutSessionPaymentStatusPaid {
-			logrus.Infof("payment for checkout session %v success!", session.ID)
-			ctx, cancel := context.WithCancel(c.Request.Context())
-			defer cancel()
-
 			var items []*orderpb.Item
 			_ = json.Unmarshal([]byte(session.Metadata["items"]), &items)
-			marshalledORder, err := json.Marshal(&domain.Order{
+			body := &domain.Order{
 				ID:          session.Metadata["orderID"],
 				CustomerID:  session.Metadata["customerID"],
 				Status:      string(stripe.CheckoutSessionPaymentStatusPaid),
 				PaymentLink: session.Metadata["paymentLink"],
 				Items:       items,
-			})
-			if err != nil {
-				logrus.Infof("error marshall domain.order, err = %v", err)
-				c.JSON(http.StatusBadRequest, err.Error())
-				return
 			}
 
 			tr := otel.Tracer("rabbitMQ")
-			mqCtx, span := tr.Start(ctx, fmt.Sprintf("rabbitMQ.%s.publish", broker.EventOrderPaid))
+			ctx, span := tr.Start(c.Request.Context(), fmt.Sprintf("rabbitMQ.%s.publish", broker.EventOrderPaid))
 			defer span.End()
-			headers := broker.InjectRabbitMQHeaders(mqCtx)
-
-			_ = h.channel.PublishWithContext(mqCtx, broker.EventOrderPaid, "", false, false, amqp.Publishing{
-				ContentType:  "application/json",
-				DeliveryMode: amqp.Persistent,
-				Body:         marshalledORder,
-				Headers:      headers,
+			err = broker.PublishEvent(ctx, broker.PublishEventRequest{
+				Channel:  h.channel,
+				Routing:  broker.FanOut,
+				Queue:    "",
+				Exchange: broker.EventOrderPaid,
+				Body:     body,
 			})
-			logrus.Infof("message published to %s, body:%s", broker.EventOrderPaid, string(marshalledORder))
 		}
 	}
 

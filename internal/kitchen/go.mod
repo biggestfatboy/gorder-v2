@@ -6,6 +6,7 @@ replace github.com/biggestfatboy/gorder-v2/common => ../common
 
 require (
 	github.com/biggestfatboy/gorder-v2/common v0.0.0-00010101000000-000000000000
+	github.com/pkg/errors v0.9.1
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/viper v1.21.0
@@ -32,7 +33,9 @@ require (
 	github.com/hashicorp/serf v0.10.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
@@ -41,6 +44,7 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.64.0 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.39.0 // indirect
@@ -49,9 +53,11 @@ require (
 	go.opentelemetry.io/otel/sdk v1.39.0 // indirect
 	go.opentelemetry.io/otel/trace v1.39.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/exp v0.0.0-20250808145144-a408d31f581a // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.78.0 // indirect

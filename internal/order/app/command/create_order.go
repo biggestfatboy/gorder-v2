@@ -2,8 +2,8 @@ package command
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
+	"github.com/biggestfatboy/gorder-v2/common/logging"
+
 	"fmt"
 	"github.com/biggestfatboy/gorder-v2/common/broker"
 	"github.com/biggestfatboy/gorder-v2/common/decorator"
@@ -11,9 +11,11 @@ import (
 	"github.com/biggestfatboy/gorder-v2/order/convertor"
 	domain "github.com/biggestfatboy/gorder-v2/order/domain/order"
 	"github.com/biggestfatboy/gorder-v2/order/entity"
+	"github.com/pkg/errors"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
+	"google.golang.org/grpc/status"
 )
 
 type CreateOrder struct {
@@ -59,13 +61,11 @@ func NewCreateOrderHandler(
 
 }
 func (c createOrderHandler) Handle(ctx context.Context, cmd CreateOrder) (*CreateOrderResult, error) {
-	q, err := c.channel.QueueDeclare(broker.EventOrderCreated, true, false, false, false, nil)
-	if err != nil {
-		return nil, err
-	}
+	var err error
+	defer logging.WhenCommandExecute(ctx, "CreateOrderHandler", cmd, err)
 
 	t := otel.Tracer("rabbitMQ")
-	ctx, span := t.Start(ctx, fmt.Sprintf("rabbitMQ.%s.publish", q.Name))
+	ctx, span := t.Start(ctx, fmt.Sprintf("rabbitMQ.%s.publish", broker.EventOrderCreated))
 	defer span.End()
 
 	validItems, err := c.validate(ctx, cmd.Items)
@@ -81,20 +81,15 @@ func (c createOrderHandler) Handle(ctx context.Context, cmd CreateOrder) (*Creat
 		return nil, err
 	}
 
-	marshalledOrder, err := json.Marshal(o)
-	if err != nil {
-		return nil, err
-	}
-	header := broker.InjectRabbitMQHeaders(ctx)
-	err = c.channel.PublishWithContext(ctx, "", q.Name, false, false, amqp.Publishing{
-		ContentType:  "application/json",
-		DeliveryMode: amqp.Persistent,
-		Body:         marshalledOrder,
-		Headers:      header,
+	err = broker.PublishEvent(ctx, broker.PublishEventRequest{
+		Channel:  c.channel,
+		Routing:  broker.Direct,
+		Queue:    broker.EventOrderCreated,
+		Exchange: "",
+		Body:     o,
 	})
-
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "publish event error q.Name=%s", broker.EventOrderCreated)
 	}
 
 	return &CreateOrderResult{OrderID: o.ID}, nil
@@ -109,7 +104,7 @@ func (c createOrderHandler) validate(ctx context.Context, items []*entity.ItemWi
 
 	resp, err := c.stockGRPC.CheckIfItemsInStock(ctx, convertor.NewItemWithQuantityConvertor().EntitiesToProtos(items))
 	if err != nil {
-		return nil, err
+		return nil, status.Convert(err).Err()
 	}
 
 	return convertor.NewItemConvertor().ProtosToEntities(resp.Items), nil
