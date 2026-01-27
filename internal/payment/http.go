@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/biggestfatboy/gorder-v2/common/entity"
 	"github.com/biggestfatboy/gorder-v2/common/logging"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel"
@@ -10,8 +11,6 @@ import (
 	"net/http"
 
 	"github.com/biggestfatboy/gorder-v2/common/broker"
-	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
-	"github.com/biggestfatboy/gorder-v2/payment/domain"
 	"github.com/gin-gonic/gin"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/viper"
@@ -73,9 +72,9 @@ func (h *PaymentHandler) handleWebhook(c *gin.Context) {
 		}
 
 		if session.PaymentStatus == stripe.CheckoutSessionPaymentStatusPaid {
-			var items []*orderpb.Item
+			var items []*entity.Item
 			_ = json.Unmarshal([]byte(session.Metadata["items"]), &items)
-			body := &domain.Order{
+			body := &entity.Order{
 				ID:          session.Metadata["orderID"],
 				CustomerID:  session.Metadata["customerID"],
 				Status:      string(stripe.CheckoutSessionPaymentStatusPaid),

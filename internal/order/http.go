@@ -5,13 +5,13 @@ import (
 	"github.com/biggestfatboy/gorder-v2/common"
 	client "github.com/biggestfatboy/gorder-v2/common/client/order"
 	"github.com/biggestfatboy/gorder-v2/common/consts"
+	"github.com/biggestfatboy/gorder-v2/common/convertor"
 	"github.com/biggestfatboy/gorder-v2/common/handler/errors"
 	"github.com/biggestfatboy/gorder-v2/common/tracing"
 	"github.com/biggestfatboy/gorder-v2/order/app"
 	"github.com/biggestfatboy/gorder-v2/order/app/command"
 	"github.com/biggestfatboy/gorder-v2/order/app/dto"
 	"github.com/biggestfatboy/gorder-v2/order/app/query"
-	"github.com/biggestfatboy/gorder-v2/order/convertor"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -75,7 +75,14 @@ func (H HTTPServer) GetCustomerCustomerIdOrdersOrderId(c *gin.Context, customerI
 	if err != nil {
 		return
 	}
-	resp.Order = convertor.NewOrderConvertor().EntityToClient(o)
+
+	resp.Order = &client.Order{
+		CustomerId:  o.CustomerID,
+		Id:          o.ID,
+		Items:       convertor.NewItemConvertor().EntitiesToClients(o.Items),
+		PaymentLink: o.PaymentLink,
+		Status:      o.Status,
+	}
 }
 
 func (H HTTPServer) validate(req client.CreateOrderRequest) error {

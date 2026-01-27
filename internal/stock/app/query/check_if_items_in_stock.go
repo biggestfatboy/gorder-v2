@@ -2,9 +2,9 @@ package query
 
 import (
 	"context"
+	"github.com/biggestfatboy/gorder-v2/common/entity"
 	"github.com/biggestfatboy/gorder-v2/common/handler/redis"
 	"github.com/biggestfatboy/gorder-v2/common/logging"
-	"github.com/biggestfatboy/gorder-v2/stock/entity"
 	"github.com/biggestfatboy/gorder-v2/stock/infrastructure/integration"
 	"github.com/pkg/errors"
 	"strings"

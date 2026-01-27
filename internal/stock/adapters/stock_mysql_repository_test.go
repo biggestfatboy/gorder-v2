@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	_ "github.com/biggestfatboy/gorder-v2/common/config"
-	"github.com/biggestfatboy/gorder-v2/stock/entity"
+	"github.com/biggestfatboy/gorder-v2/common/entity"
 	"github.com/biggestfatboy/gorder-v2/stock/infrastructure/persistent"
 	"github.com/biggestfatboy/gorder-v2/stock/infrastructure/persistent/builder"
 	"github.com/spf13/viper"

@@ -3,7 +3,7 @@ package stock
 import (
 	"context"
 	"fmt"
-	"github.com/biggestfatboy/gorder-v2/stock/entity"
+	"github.com/biggestfatboy/gorder-v2/common/entity"
 	"strings"
 )
 

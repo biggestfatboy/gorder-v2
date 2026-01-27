@@ -2,8 +2,7 @@ package processor
 
 import (
 	"context"
-
-	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
+	"github.com/biggestfatboy/gorder-v2/common/entity"
 )
 
 // stub
@@ -15,6 +14,6 @@ func NewInmemProcessor() *InmemProcessor {
 	return &InmemProcessor{}
 }
 
-func (i InmemProcessor) CreatePaymentLink(_ context.Context, _ *orderpb.Order) (string, error) {
+func (i InmemProcessor) CreatePaymentLink(ctx context.Context, order *entity.Order) (string, error) {
 	return "inmem-payment-link", nil
 }

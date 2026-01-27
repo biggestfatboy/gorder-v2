@@ -2,7 +2,7 @@ package adapters
 
 import (
 	"context"
-	"github.com/biggestfatboy/gorder-v2/stock/entity"
+	"github.com/biggestfatboy/gorder-v2/common/entity"
 	"sync"
 
 	domain "github.com/biggestfatboy/gorder-v2/stock/domain/stock"

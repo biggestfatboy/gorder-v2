@@ -2,11 +2,11 @@ package ports
 
 import (
 	"context"
+	"github.com/biggestfatboy/gorder-v2/common/convertor"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/stockpb"
 	"github.com/biggestfatboy/gorder-v2/common/tracing"
 	"github.com/biggestfatboy/gorder-v2/stock/app"
 	"github.com/biggestfatboy/gorder-v2/stock/app/query"
-	"github.com/biggestfatboy/gorder-v2/stock/convertor"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

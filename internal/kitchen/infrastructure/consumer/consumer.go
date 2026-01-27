@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/biggestfatboy/gorder-v2/common/broker"
+	"github.com/biggestfatboy/gorder-v2/common/convertor"
+	"github.com/biggestfatboy/gorder-v2/common/entity"
 	"github.com/biggestfatboy/gorder-v2/common/genproto/orderpb"
 	"github.com/biggestfatboy/gorder-v2/common/logging"
 	"github.com/pkg/errors"
@@ -13,14 +15,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"time"
 )
-
-type Order struct {
-	ID          string
-	CustomerID  string
-	Status      string
-	PaymentLink string
-	Items       []*orderpb.Item
-}
 
 type OrderService interface {
 	UpdateOrder(ctx context.Context, order *orderpb.Order) error
@@ -71,7 +65,7 @@ func (c *Consumer) handleMessage(ch *amqp.Channel, msg amqp.Delivery, q amqp.Que
 			_ = msg.Ack(false)
 		}
 	}()
-	o := &Order{}
+	o := &entity.Order{}
 	if err = json.Unmarshal(msg.Body, o); err != nil {
 		err = errors.Wrap(err, "fail to unmarshall msg to order")
 		return
@@ -87,7 +81,7 @@ func (c *Consumer) handleMessage(ch *amqp.Channel, msg amqp.Delivery, q amqp.Que
 		CustomerID:  o.CustomerID,
 		Status:      "ready",
 		PaymentLink: o.PaymentLink,
-		Items:       o.Items,
+		Items:       convertor.NewItemConvertor().EntitiesToProtos(o.Items),
 	}); err != nil {
 		logging.Errof(ctx, nil, "failed to updating order, orderID = %v, err=%v", o.ID, err)
 		if err = broker.HandlerRetry(ctx, ch, &msg); err != nil {
@@ -98,7 +92,7 @@ func (c *Consumer) handleMessage(ch *amqp.Channel, msg amqp.Delivery, q amqp.Que
 	span.AddEvent("kitchen.order.finished.updated")
 }
 
-func cook(ctx context.Context, o *Order) {
+func cook(ctx context.Context, o *entity.Order) {
 	logrus.WithContext(ctx).Printf("cooking order: %s\n", o.ID)
 	time.Sleep(5 * time.Second)
 	logrus.WithContext(ctx).Printf("order %s done!\n", o.ID)
