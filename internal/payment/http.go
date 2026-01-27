@@ -74,13 +74,13 @@ func (h *PaymentHandler) handleWebhook(c *gin.Context) {
 		if session.PaymentStatus == stripe.CheckoutSessionPaymentStatusPaid {
 			var items []*entity.Item
 			_ = json.Unmarshal([]byte(session.Metadata["items"]), &items)
-			body := &entity.Order{
-				ID:          session.Metadata["orderID"],
-				CustomerID:  session.Metadata["customerID"],
-				Status:      string(stripe.CheckoutSessionPaymentStatusPaid),
-				PaymentLink: session.Metadata["paymentLink"],
-				Items:       items,
-			}
+			body := entity.NewOrder(
+				session.Metadata["orderID"],
+				session.Metadata["customerID"],
+				string(stripe.CheckoutSessionPaymentStatusPaid),
+				session.Metadata["paymentLink"],
+				items,
+			)
 
 			tr := otel.Tracer("rabbitMQ")
 			ctx, span := tr.Start(c.Request.Context(), fmt.Sprintf("rabbitMQ.%s.publish", broker.EventOrderPaid))

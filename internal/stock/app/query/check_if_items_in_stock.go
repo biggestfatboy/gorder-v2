@@ -72,11 +72,7 @@ func (g checkIfItemsInStockHandler) Handle(ctx context.Context, query CheckIfIte
 		if err != nil || priceID == "" {
 			return nil, err
 		}
-		res = append(res, &entity.Item{
-			ID:       i.ID,
-			Quantity: i.Quantity,
-			PriceID:  priceID,
-		})
+		res = append(res, entity.NewItem(i.ID, "", i.Quantity, priceID))
 	}
 	//TODO 扣库存
 	if err := g.checkStock(ctx, query.Items); err != nil {
@@ -138,10 +134,11 @@ func (h checkIfItemsInStockHandler) checkStock(ctx context.Context, queryItems [
 			for _, e := range existing {
 				for _, q := range query {
 					if e.ID == q.ID {
-						newItems = append(newItems, &entity.ItemWithQuantity{
-							ID:       e.ID,
-							Quantity: e.Quantity - q.Quantity,
-						})
+						iq, err := entity.NewValidItemWithQuantity(e.ID, e.Quantity-q.Quantity)
+						if err != nil {
+							return nil, err
+						}
+						newItems = append(newItems, iq)
 					}
 				}
 			}
