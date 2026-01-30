@@ -1,5 +1,8 @@
 fallback-grpc-addr: 192.168.77.38:3030
 dial-grpc-timeout: 10
+prometheus:
+  export_http_host: 192.168.77.38
+  export_http_port: 9123
 jaeger:
   url: "http://192.168.77.38:14268/api/traces"
 consul:
@@ -9,16 +12,19 @@ order:
   server-to-run: http
   http-addr: 192.168.77.38:8282
   grpc-addr: 192.168.77.38:5002
+  metrics_export_addr: 192.168.77.38:9123
 stock:
   service-name: stock
   server-to-run: grpc
   http-addr: 192.168.77.38:8283
   grpc-addr: 192.168.77.38:5003
+  metrics_export_addr: 192.168.77.38:9124
 payment:
   service-name: payment
   server-to-run: http
   http-addr: 192.168.77.38:8284
   grpc-addr: 192.168.77.38:5004
+  metrics_export_addr: 192.168.77.38:9125
 kitchen:
   service-name: kitchen
 rabbitmq:

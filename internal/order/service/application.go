@@ -12,6 +12,7 @@ import (
 	"github.com/biggestfatboy/gorder-v2/order/app"
 	"github.com/biggestfatboy/gorder-v2/order/app/command"
 	"github.com/biggestfatboy/gorder-v2/order/app/query"
+	"github.com/biggestfatboy/gorder-v2/order/infrastructure/mq"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -45,15 +46,18 @@ func NewApplication(ctx context.Context) (app.Application, func()) {
 func newApplication(_ context.Context, stockGRPC query.StockService, ch *amqp.Channel) app.Application {
 	mongoClient := newMongoClient()
 	orderRepo := adapters.NewOrderRepositoryMongo(mongoClient)
-	logger := logrus.NewEntry(logrus.StandardLogger())
-	metricClient := metrics.TodoMetrics{}
+	metricsClient := metrics.NewPrometheusMetricsClient(&metrics.PrometheusMetricsClientConfig{
+		Addr:        viper.GetString("order.metrics_export_addr"),
+		ServiceName: viper.GetString("order.service_name"),
+	})
+	eventPublisher := mq.NewRabbitMQEventPublisher(ch)
 	return app.Application{
 		Commands: app.Commands{
-			CreateOrder: command.NewCreateOrderHandler(orderRepo, stockGRPC, ch, logger, metricClient),
-			UpdateOrder: command.NewUpdateOrderHandler(orderRepo, logger, metricClient),
+			CreateOrder: command.NewCreateOrderHandler(orderRepo, stockGRPC, eventPublisher, logrus.StandardLogger(), metricsClient),
+			UpdateOrder: command.NewUpdateOrderHandler(orderRepo, logrus.StandardLogger(), metricsClient),
 		},
 		Queries: app.Queries{
-			GetCustomerOrder: query.NewGetCustomerOrderHandler(orderRepo, logger, metricClient),
+			GetCustomerOrder: query.NewGetCustomerOrderHandler(orderRepo, logrus.StandardLogger(), metricsClient),
 		},
 	}
 }

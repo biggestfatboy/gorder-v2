@@ -3,28 +3,30 @@ package decorator
 import (
 	"context"
 	"fmt"
+	"github.com/biggestfatboy/gorder-v2/common/logging"
+	"github.com/bytedance/gopkg/util/logger"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 )
 
 type queryLoggingDecorator[C, R any] struct {
-	logger *logrus.Entry
+	logger *logrus.Logger
 	base   QueryHandler[C, R]
 }
 
 func (q queryLoggingDecorator[C, R]) Handle(ctx context.Context, cmd C) (result R, err error) {
-	logger := q.logger.WithFields(logrus.Fields{
+	fields := logrus.Fields{
 		"query":      generateActionName(cmd),
 		"query_body": fmt.Sprintf("%#v", cmd),
-	})
+	}
 
 	logger.Debug("Executing query")
 	defer func() {
 		if err == nil {
-			logger.Info("Query execute successfully")
+			logging.Infof(ctx, fields, "%s", "Query execute successfully")
 		} else {
-			logger.Error("Failed to execute query", err)
+			logging.Errof(ctx, fields, "Failed to execute query, err=%v", err)
 		}
 	}()
 	res, err := q.base.Handle(ctx, cmd)
@@ -32,22 +34,22 @@ func (q queryLoggingDecorator[C, R]) Handle(ctx context.Context, cmd C) (result 
 }
 
 type commandLoggingDecorator[C, R any] struct {
-	logger *logrus.Entry
+	logger *logrus.Logger
 	base   CommandHandler[C, R]
 }
 
 func (q commandLoggingDecorator[C, R]) Handle(ctx context.Context, cmd C) (result R, err error) {
-	logger := q.logger.WithFields(logrus.Fields{
+	fields := logrus.Fields{
 		"command":      generateActionName(cmd),
 		"command_body": fmt.Sprintf("%#v", cmd),
-	})
+	}
 
 	logger.Debug("Executing command")
 	defer func() {
 		if err == nil {
-			logger.Info("Command execute successfully")
+			logging.Infof(ctx, fields, "%s", "Query Command successfully")
 		} else {
-			logger.Error("Failed to execute command", err)
+			logging.Errof(ctx, fields, "Failed to execute Command, err=%v", err)
 		}
 	}()
 	res, err := q.base.Handle(ctx, cmd)

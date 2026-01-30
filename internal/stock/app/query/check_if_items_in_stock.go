@@ -33,7 +33,7 @@ type checkIfItemsInStockHandler struct {
 func NewCheckIfItemsInStockHandler(
 	stockRepo domain.Repository,
 	stripeAPI *integration.StripeAPI,
-	logger *logrus.Entry,
+	logger *logrus.Logger,
 	metricClient decorator.MetricsClient,
 ) CheckIfItemsInStockHandler {
 	if stockRepo == nil {
@@ -65,17 +65,29 @@ func (g checkIfItemsInStockHandler) Handle(ctx context.Context, query CheckIfIte
 			logging.Warnf(ctx, nil, "redis unlock failed, err=%v", err)
 		}
 	}()
-
+	var err error
 	var res []*entity.Item
+	defer func() {
+		f := logrus.Fields{
+			"query": query,
+			"res":   res,
+		}
+		if err != nil {
+			logging.Errof(ctx, f, "checkIfItemsInStock err=%v", err)
+		} else {
+			logging.Infof(ctx, f, "%s", "checkIfItemsInStock success")
+		}
+	}()
+
 	for _, i := range query.Items {
-		priceID, err := g.stripeAPI.GetPriceByProductID(ctx, i.ID)
-		if err != nil || priceID == "" {
+		productI, err := g.stripeAPI.GetProductByID(ctx, i.ID)
+		if err != nil {
 			return nil, err
 		}
-		res = append(res, entity.NewItem(i.ID, "", i.Quantity, priceID))
+		res = append(res, entity.NewItem(i.ID, productI.Name, i.Quantity, productI.DefaultPrice.ID))
 	}
-	//TODO 扣库存
-	if err := g.checkStock(ctx, query.Items); err != nil {
+
+	if err = g.checkStock(ctx, query.Items); err != nil {
 		return nil, err
 	}
 	return res, nil

@@ -3,8 +3,9 @@ package logging
 import (
 	"context"
 	"github.com/biggestfatboy/gorder-v2/common/tracing"
+	"github.com/lestrrat-go/file-rotatelogs"
+	"github.com/rifflock/lfshook"
 	"github.com/sirupsen/logrus"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"os"
 	"strconv"
 	"time"
@@ -16,7 +17,54 @@ import (
 func Init() {
 	SetFormatter(logrus.StandardLogger())
 	logrus.SetLevel(logrus.DebugLevel)
+	setOutput(logrus.StandardLogger())
 	logrus.AddHook(&traceHook{})
+}
+
+func setOutput(logger *logrus.Logger) {
+	folder := "./log/"
+	filePath := "app.log"
+	errorPath := "errors.log"
+	if err := os.MkdirAll(folder, 0750); err != nil && !os.IsExist(err) {
+		panic(err)
+	}
+	file, err := os.OpenFile(folder+filePath, os.O_CREATE|os.O_RDWR, 0755)
+	if err != nil {
+		panic(err)
+	}
+	_, err = os.OpenFile(folder+errorPath, os.O_CREATE|os.O_RDWR, 0755)
+	if err != nil {
+		panic(err)
+	}
+	logger.SetOutput(file)
+	rotateInfo, err := rotatelogs.New(folder+filePath+".%y%m%d",
+		rotatelogs.WithLinkName("app.log"),
+		rotatelogs.WithMaxAge(7*24*time.Hour),
+		rotatelogs.WithRotationTime(time.Hour*1),
+	)
+	if err != nil {
+		panic(err)
+	}
+	rotateError, err := rotatelogs.New(folder+errorPath+".%y%m%d",
+		rotatelogs.WithLinkName("errors.log"),
+		rotatelogs.WithMaxAge(7*24*time.Hour),
+		rotatelogs.WithRotationTime(time.Hour*1),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	rotationMap := lfshook.WriterMap{
+		logrus.DebugLevel: rotateInfo,
+		logrus.InfoLevel:  rotateInfo,
+		logrus.WarnLevel:  rotateError,
+		logrus.ErrorLevel: rotateError,
+		logrus.FatalLevel: rotateError,
+		logrus.PanicLevel: rotateError,
+	}
+	logrus.AddHook(lfshook.NewHook(rotationMap, &logrus.JSONFormatter{
+		TimestampFormat: time.DateTime,
+	}))
 }
 
 func SetFormatter(logger *logrus.Logger) {
@@ -30,11 +78,11 @@ func SetFormatter(logger *logrus.Logger) {
 	})
 
 	if isLocal, _ := strconv.ParseBool(os.Getenv("LOCAL_ENV")); isLocal {
-		logger.SetFormatter(&prefixed.TextFormatter{
-			ForceColors:     true,
-			ForceFormatting: true,
-			TimestampFormat: time.RFC3339,
-		})
+		//logger.SetFormatter(&prefixed.TextFormatter{
+		//	ForceColors:     true,
+		//	ForceFormatting: true,
+		//	TimestampFormat: time.RFC3339,
+		//})
 	}
 }
 

@@ -21,7 +21,7 @@ type getCustomerOrderHandler struct {
 
 func NewGetCustomerOrderHandler(
 	orderRepo domain.Repository,
-	logger *logrus.Entry,
+	logger *logrus.Logger,
 	metricClient decorator.MetricsClient,
 ) GetCustomerOrderHandler {
 	if orderRepo == nil {

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/biggestfatboy/gorder-v2/common/consts"
 	"github.com/biggestfatboy/gorder-v2/common/entity"
 	"github.com/biggestfatboy/gorder-v2/common/logging"
 	"github.com/pkg/errors"
@@ -77,7 +78,7 @@ func (h *PaymentHandler) handleWebhook(c *gin.Context) {
 			body := entity.NewOrder(
 				session.Metadata["orderID"],
 				session.Metadata["customerID"],
-				string(stripe.CheckoutSessionPaymentStatusPaid),
+				consts.OrderStatusPaid,
 				session.Metadata["paymentLink"],
 				items,
 			)

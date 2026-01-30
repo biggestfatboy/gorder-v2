@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"github.com/biggestfatboy/gorder-v2/common/consts"
 	"github.com/biggestfatboy/gorder-v2/common/convertor"
 	"github.com/biggestfatboy/gorder-v2/common/decorator"
 	"github.com/biggestfatboy/gorder-v2/common/entity"
@@ -26,7 +27,7 @@ type createPaymentHandler struct {
 func NewCreatePaymentHandler(
 	processor domain.Processor,
 	orderGRPC OrderService,
-	logger *logrus.Entry,
+	logger *logrus.Logger,
 	metricClient decorator.MetricsClient) CreatePaymentHandler {
 	if processor == nil {
 		panic("nil orderRepo")
@@ -55,7 +56,7 @@ func (c createPaymentHandler) Handle(ctx context.Context, cmd CreatePayment) (st
 	newOrder, err := entity.NewValidOrder(
 		cmd.Order.ID,
 		cmd.Order.CustomerID,
-		"waiting_for_payment",
+		consts.OrderStatusWaitingForPayment,
 		link,
 		cmd.Order.Items,
 	)

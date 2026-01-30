@@ -71,11 +71,11 @@ func (c *Consumer) handleMessage(ch *amqp.Channel, msg amqp.Delivery, q amqp.Que
 	}
 	if _, err = c.app.UpdateOrder.Handle(ctx, command.UpdateOrder{
 		Order: o,
-		UpdateFn: func(ctx context.Context, order *order.Order) (*order.Order, error) {
-			if err = o.IsPaid(); err != nil {
+		UpdateFn: func(ctx context.Context, oldOrder *order.Order) (*order.Order, error) {
+			if err := oldOrder.UpdataStatus(o.Status); err != nil {
 				return nil, err
 			}
-			return order, nil
+			return oldOrder, nil
 		}}); err != nil {
 		logging.Errof(ctx, nil, "failed to updating order, orderID = %v, err=%v", o.ID, err)
 

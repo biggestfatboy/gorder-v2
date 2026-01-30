@@ -66,8 +66,19 @@ func (G GRPCServer) UpdateOrder(ctx context.Context, request *orderpb.Order) (_ 
 	}
 	_, err = G.app.UpdateOrder.Handle(ctx, command.UpdateOrder{
 		Order: order,
-		UpdateFn: func(ctx context.Context, order *domain.Order) (*domain.Order, error) {
-			return order, nil
+		UpdateFn: func(ctx context.Context, oldOrder *domain.Order) (*domain.Order, error) {
+			if err := oldOrder.UpdataStatus(request.Status); err != nil {
+				return nil, err
+			}
+
+			if err := oldOrder.UpdataPaymentLink(request.PaymentLink); err != nil {
+				return nil, err
+			}
+
+			if err := oldOrder.UpdataItems(convertor.NewItemConvertor().ProtosToEntities(request.Items)); err != nil {
+				return nil, err
+			}
+			return oldOrder, nil
 		},
 	})
 	return nil, err

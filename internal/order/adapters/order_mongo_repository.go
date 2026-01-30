@@ -106,7 +106,7 @@ func (o *OrderRepositoryMongo) Update(ctx context.Context,
 	if err != nil {
 		return
 	}
-	updated, err := updateFn(ctx, od)
+	updated, err := updateFn(ctx, oldOrder)
 	if err != nil {
 		return
 	}

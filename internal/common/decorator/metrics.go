@@ -18,14 +18,14 @@ type queryMetricsDecorator[C, R any] struct {
 
 func (q queryMetricsDecorator[C, R]) Handle(ctx context.Context, cmd C) (result R, err error) {
 	start := time.Now()
-	actionNmae := strings.ToLower(generateActionName(cmd))
+	actionName := strings.ToLower(generateActionName(cmd))
 	defer func() {
 		end := time.Since(start)
-		q.client.Inc(fmt.Sprintf("querys.%x.duration", actionNmae), int(end.Seconds()))
+		q.client.Inc(fmt.Sprintf("querys.%x.duration", actionName), int(end.Seconds()))
 		if err == nil {
-			q.client.Inc(fmt.Sprintf("querys.%x.success", actionNmae), 1)
+			q.client.Inc(fmt.Sprintf("querys.%x.success", actionName), 1)
 		} else {
-			q.client.Inc(fmt.Sprintf("querys.%x.failure", actionNmae), 1)
+			q.client.Inc(fmt.Sprintf("querys.%x.failure", actionName), 1)
 		}
 	}()
 	return q.base.Handle(ctx, cmd)
@@ -38,14 +38,14 @@ type commandMetricsDecorator[C, R any] struct {
 
 func (q commandMetricsDecorator[C, R]) Handle(ctx context.Context, cmd C) (result R, err error) {
 	start := time.Now()
-	actionNmae := strings.ToLower(generateActionName(cmd))
+	actionName := strings.ToLower(generateActionName(cmd))
 	defer func() {
 		end := time.Since(start)
-		q.client.Inc(fmt.Sprintf("commands.%x.duration", actionNmae), int(end.Seconds()))
+		q.client.Inc(fmt.Sprintf("commands.%x.duration", actionName), int(end.Seconds()))
 		if err == nil {
-			q.client.Inc(fmt.Sprintf("commands.%x.success", actionNmae), 1)
+			q.client.Inc(fmt.Sprintf("commands.%x.success", actionName), 1)
 		} else {
-			q.client.Inc(fmt.Sprintf("commands.%x.failure", actionNmae), 1)
+			q.client.Inc(fmt.Sprintf("commands.%x.failure", actionName), 1)
 		}
 	}()
 	return q.base.Handle(ctx, cmd)
